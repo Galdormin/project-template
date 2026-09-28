@@ -6,7 +6,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{AppSystems, screens::Screen, theme::prelude::*};
+use crate::{AppSystems, screens::Screen, theme::widget::UiRoot};
 
 pub(super) fn plugin(app: &mut App) {
     // Spawn splash screen.
@@ -48,40 +48,38 @@ const SPLASH_DURATION_SECS: f32 = 1.8;
 const SPLASH_FADE_DURATION_SECS: f32 = 0.6;
 
 fn spawn_splash_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn((
-        widget::ui_root("Splash Screen"),
-        BackgroundColor(SPLASH_BACKGROUND_COLOR),
-        DespawnOnExit(Screen::Splash),
-        children![(
-            Name::new("Splash image"),
-            Node {
-                width: percent(70),
-                ..default()
+    let splash_image = asset_server
+        .load_builder()
+        .with_settings(
+            // This should be an embedded asset for instant loading, but that is
+            // currently [broken on Windows Wasm builds](https://github.com/bevyengine/bevy/issues/14246).
+            |settings: &mut ImageLoaderSettings| {
+                // Make an exception for the splash image in case
+                // `ImagePlugin::default_nearest()` is used for pixel art.
+                settings.sampler = ImageSampler::linear();
             },
-            ImageNode::new(
-                asset_server
-                    .load_builder()
-                    .with_settings(
-                        // This should be an embedded asset for instant loading, but that is
-                        // currently [broken on Windows Wasm builds](https://github.com/bevyengine/bevy/issues/14246).
-                        |settings: &mut ImageLoaderSettings| {
-                            // Make an exception for the splash image in case
-                            // `ImagePlugin::default_nearest()` is used for pixel art.
-                            settings.sampler = ImageSampler::linear();
-                        },
-                    )
-                    .load("images/splash.png",)
-            ),
+        )
+        .load("images/splash.png");
+
+    commands.spawn_scene(bsn! {
+        #SplashScreen
+        @UiRoot
+        BackgroundColor(SPLASH_BACKGROUND_COLOR)
+        DespawnOnExit::<Screen>(Screen::Splash)
+        Children [(
+            #SplashImage
+            Node { width: percent(70) }
+            ImageNode { image: {splash_image} }
             ImageNodeFadeInOut {
                 total_duration: SPLASH_DURATION_SECS,
                 fade_duration: SPLASH_FADE_DURATION_SECS,
                 t: 0.0,
-            },
-        )],
-    ));
+            }
+        )]
+    });
 }
 
-#[derive(Component, Reflect)]
+#[derive(Component, Default, Clone, Reflect)]
 #[reflect(Component)]
 struct ImageNodeFadeInOut {
     /// Total duration in seconds.

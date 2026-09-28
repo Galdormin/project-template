@@ -2,31 +2,40 @@
 
 use bevy::prelude::*;
 
-use crate::{asset_tracking::ResourceHandles, menus::Menu, screens::Screen, theme::widget};
+use crate::{
+    asset_tracking::ResourceHandles,
+    menus::Menu,
+    screens::Screen,
+    theme::widget::{UiButton, UiRoot},
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Main), spawn_main_menu);
 }
 
 fn spawn_main_menu(mut commands: Commands) {
-    commands.spawn((
-        widget::ui_root("Main Menu"),
-        GlobalZIndex(2),
-        DespawnOnExit(Menu::Main),
-        #[cfg(not(target_family = "wasm"))]
-        children![
-            widget::button("Play", enter_loading_or_gameplay_screen),
-            widget::button("Settings", open_settings_menu),
-            widget::button("Credits", open_credits_menu),
-            widget::button("Exit", exit_app),
-        ],
-        #[cfg(target_family = "wasm")]
-        children![
-            widget::button("Play", enter_loading_or_gameplay_screen),
-            widget::button("Settings", open_settings_menu),
-            widget::button("Credits", open_credits_menu),
-        ],
-    ));
+    commands.spawn_scene(bsn! {
+        #MainMenu
+        @UiRoot
+        GlobalZIndex(2)
+        DespawnOnExit::<Menu>(Menu::Main)
+        Children [
+            @UiButton { @text: "Play" } on(enter_loading_or_gameplay_screen),
+            @UiButton { @text: "Settings" } on(open_settings_menu),
+            @UiButton { @text: "Credits" } on(open_credits_menu),
+            {exit_button()},
+        ]
+    });
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn exit_button() -> impl SceneList {
+    bsn_list![@UiButton { @text: "Exit" } on(exit_app)]
+}
+
+#[cfg(target_family = "wasm")]
+fn exit_button() -> impl SceneList {
+    bsn_list![]
 }
 
 fn enter_loading_or_gameplay_screen(

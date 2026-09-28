@@ -4,7 +4,11 @@
 
 use bevy::{audio::Volume, input::common_conditions::input_just_pressed, prelude::*};
 
-use crate::{menus::Menu, screens::Screen, theme::prelude::*};
+use crate::{
+    menus::Menu,
+    screens::Screen,
+    theme::widget::{ButtonSize, Header, Label, UiButton, UiRoot},
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Settings), spawn_settings_menu);
@@ -20,62 +24,52 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 fn spawn_settings_menu(mut commands: Commands) {
-    commands.spawn((
-        widget::ui_root("Settings Menu"),
-        GlobalZIndex(2),
-        DespawnOnExit(Menu::Settings),
-        children![
-            widget::header("Settings"),
+    commands.spawn_scene(bsn! {
+        #SettingsMenu
+        @UiRoot
+        GlobalZIndex(2)
+        DespawnOnExit::<Menu>(Menu::Settings)
+        Children [
+            @Header Text("Settings"),
             settings_grid(),
-            widget::button("Back", go_back_on_click),
-        ],
-    ));
+            @UiButton { @text: "Back" } on(go_back_on_click),
+        ]
+    });
 }
 
-fn settings_grid() -> impl Bundle {
-    (
-        Name::new("Settings Grid"),
+fn settings_grid() -> impl Scene {
+    bsn! {
+        #SettingsGrid
         Node {
             display: Display::Grid,
             row_gap: px(10),
             column_gap: px(30),
-            grid_template_columns: RepeatedGridTrack::px(2, 400.0),
-            ..default()
-        },
-        children![
-            (
-                widget::label("Master Volume"),
-                Node {
-                    justify_self: JustifySelf::End,
-                    ..default()
-                }
-            ),
+            grid_template_columns: {RepeatedGridTrack::px::<Vec<_>>(2, 400.0)},
+        }
+        Children [
+            @Label Text("Master Volume") Node { justify_self: JustifySelf::End },
             global_volume_widget(),
-        ],
-    )
+        ]
+    }
 }
 
-fn global_volume_widget() -> impl Bundle {
-    (
-        Name::new("Global Volume Widget"),
-        Node {
-            justify_self: JustifySelf::Start,
-            ..default()
-        },
-        children![
-            widget::button_small("-", lower_global_volume),
+fn global_volume_widget() -> impl Scene {
+    bsn! {
+        #GlobalVolumeWidget
+        Node { justify_self: JustifySelf::Start }
+        Children [
+            @UiButton { @text: "-", @size: ButtonSize::Small } on(lower_global_volume),
             (
-                Name::new("Current Volume"),
+                #CurrentVolume
                 Node {
                     padding: UiRect::horizontal(px(10)),
                     justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                children![(widget::label(""), GlobalVolumeLabel)],
+                }
+                Children [@Label GlobalVolumeLabel]
             ),
-            widget::button_small("+", raise_global_volume),
-        ],
-    )
+            @UiButton { @text: "+", @size: ButtonSize::Small } on(raise_global_volume),
+        ]
+    }
 }
 
 const MIN_VOLUME: f32 = 0.0;
@@ -91,7 +85,7 @@ fn raise_global_volume(_: On<Pointer<Click>>, mut global_volume: ResMut<GlobalVo
     global_volume.volume = Volume::Linear(linear);
 }
 
-#[derive(Component, Reflect)]
+#[derive(Component, Default, Clone, Reflect)]
 #[reflect(Component)]
 struct GlobalVolumeLabel;
 

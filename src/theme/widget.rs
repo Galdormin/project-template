@@ -1,132 +1,108 @@
-//! Helper functions for creating common widgets.
+//! Reusable scene components for common widgets.
 
-use std::borrow::Cow;
-
-use bevy::{
-    ecs::{spawn::SpawnWith, system::IntoObserverSystem},
-    prelude::*,
-};
+use bevy::prelude::*;
 
 use crate::theme::{interaction::InteractionPalette, palette::*};
 
 /// A root UI node that fills the window and centers its content.
-pub fn ui_root(name: impl Into<Cow<'static, str>>) -> impl Bundle {
-    (
-        Name::new(name),
-        Node {
-            position_type: PositionType::Absolute,
-            width: percent(100),
-            height: percent(100),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            flex_direction: FlexDirection::Column,
-            row_gap: px(20),
-            ..default()
-        },
-        // Don't block picking events for other UI roots.
-        Pickable::IGNORE,
-    )
+#[derive(SceneComponent, Default, Clone)]
+pub struct UiRoot;
+
+impl UiRoot {
+    fn scene() -> impl Scene {
+        bsn! {
+            Node {
+                position_type: PositionType::Absolute,
+                width: percent(100),
+                height: percent(100),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                flex_direction: FlexDirection::Column,
+                row_gap: px(20),
+            }
+            // Don't block picking events for other UI roots.
+            Pickable::IGNORE
+        }
+    }
 }
 
-/// A simple header label. Bigger than [`label`].
-pub fn header(text: impl Into<String>) -> impl Bundle {
-    (
-        Name::new("Header"),
-        Text(text.into()),
-        TextFont::from_font_size(40.0),
-        TextColor(HEADER_TEXT),
-    )
+/// A simple header label. Bigger than [`Label`].
+#[derive(SceneComponent, Default, Clone)]
+pub struct Header;
+
+impl Header {
+    fn scene() -> impl Scene {
+        bsn! {
+            Text
+            TextFont { font_size: px(40) }
+            TextColor(HEADER_TEXT)
+        }
+    }
 }
 
 /// A simple text label.
-pub fn label(text: impl Into<String>) -> impl Bundle {
-    (
-        Name::new("Label"),
-        Text(text.into()),
-        TextFont::from_font_size(24.0),
-        TextColor(LABEL_TEXT),
-    )
+#[derive(SceneComponent, Default, Clone)]
+pub struct Label;
+
+impl Label {
+    fn scene() -> impl Scene {
+        bsn! {
+            Text
+            TextFont { font_size: px(24) }
+            TextColor(LABEL_TEXT)
+        }
+    }
 }
 
-/// A large rounded button with text and an action defined as an [`Observer`].
-pub fn button<E, B, M, I>(text: impl Into<String>, action: I) -> impl Bundle
-where
-    E: EntityEvent,
-    B: Bundle,
-    I: IntoObserverSystem<E, B, M>,
-{
-    button_base(
-        text,
-        action,
-        Node {
-            width: px(380),
-            height: px(80),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            border_radius: BorderRadius::MAX,
-            ..default()
-        },
-    )
+/// A button with text. Attach its action with `on(...)`.
+#[derive(SceneComponent, Default, Clone)]
+#[scene(ButtonProps)]
+pub struct UiButton;
+
+#[derive(Default)]
+pub struct ButtonProps {
+    pub text: String,
+    pub size: ButtonSize,
 }
 
-/// A small square button with text and an action defined as an [`Observer`].
-pub fn button_small<E, B, M, I>(text: impl Into<String>, action: I) -> impl Bundle
-where
-    E: EntityEvent,
-    B: Bundle,
-    I: IntoObserverSystem<E, B, M>,
-{
-    button_base(
-        text,
-        action,
-        Node {
-            width: px(30),
-            height: px(30),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            ..default()
-        },
-    )
+#[derive(Default, Clone, Copy)]
+pub enum ButtonSize {
+    /// A large rounded button.
+    #[default]
+    Large,
+    /// A small square button.
+    Small,
 }
 
-/// A simple button with text and an action defined as an [`Observer`]. The button's layout is provided by `button_bundle`.
-fn button_base<E, B, M, I>(
-    text: impl Into<String>,
-    action: I,
-    button_bundle: impl Bundle,
-) -> impl Bundle
-where
-    E: EntityEvent,
-    B: Bundle,
-    I: IntoObserverSystem<E, B, M>,
-{
-    let text = text.into();
-    let action = IntoObserverSystem::into_system(action);
-    (
-        Name::new("Button"),
-        Node::default(),
-        Children::spawn(SpawnWith(|parent: &mut ChildSpawner| {
-            parent
-                .spawn((
-                    Name::new("Button Inner"),
-                    Button,
-                    BackgroundColor(BUTTON_BACKGROUND),
-                    InteractionPalette {
-                        none: BUTTON_BACKGROUND,
-                        hovered: BUTTON_HOVERED_BACKGROUND,
-                        pressed: BUTTON_PRESSED_BACKGROUND,
-                    },
-                    children![(
-                        Name::new("Button Text"),
-                        Text(text),
-                        TextFont::from_font_size(40.0),
-                        TextColor(BUTTON_TEXT),
-                        // Don't bubble picking events from the text up to the button.
-                        Pickable::IGNORE,
-                    )],
-                ))
-                .insert(button_bundle)
-                .observe(action);
-        })),
-    )
+impl UiButton {
+    fn scene(props: ButtonProps) -> impl Scene {
+        let (width, height, border_radius) = match props.size {
+            ButtonSize::Large => (px(380), px(80), BorderRadius::MAX),
+            ButtonSize::Small => (px(30), px(30), BorderRadius::ZERO),
+        };
+        bsn! {
+            Button
+            Node {
+                width: {width},
+                height: {height},
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                border_radius: {border_radius},
+            }
+            BackgroundColor(BUTTON_BACKGROUND)
+            InteractionPalette {
+                none: BUTTON_BACKGROUND,
+                hovered: BUTTON_HOVERED_BACKGROUND,
+                pressed: BUTTON_PRESSED_BACKGROUND,
+            }
+            Children [(
+                #ButtonText
+                Text({props.text})
+                TextFont { font_size: px(40) }
+                TextColor(BUTTON_TEXT)
+                // Don't bubble picking events from the text up to the button.
+                Pickable::IGNORE
+            )]
+        }
+    }
 }
