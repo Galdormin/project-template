@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::theme::{interaction::InteractionPalette, palette::*};
+use crate::theme::{fonts::CustomFont, interaction::InteractionPalette, palette::*};
 
 /// A root UI node that fills the window and centers its content.
 #[derive(SceneComponent, Default, Clone)]
@@ -63,6 +63,7 @@ pub struct UiButton;
 pub struct ButtonProps {
     pub text: String,
     pub size: ButtonSize,
+    pub font: CustomFont,
 }
 
 #[derive(Default, Clone, Copy)]
@@ -99,6 +100,7 @@ impl UiButton {
                 #ButtonText
                 Text({props.text})
                 TextFont { font_size: px(40) }
+                {props.font.scene()}
                 TextColor(BUTTON_TEXT)
                 // Don't bubble picking events from the text up to the button.
                 Pickable::IGNORE

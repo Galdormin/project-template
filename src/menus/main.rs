@@ -6,7 +6,10 @@ use crate::{
     asset_tracking::ResourceHandles,
     menus::Menu,
     screens::Screen,
-    theme::widget::{UiButton, UiRoot},
+    theme::{
+        fonts::CustomFont,
+        widget::{UiButton, UiRoot},
+    },
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -20,9 +23,9 @@ fn spawn_main_menu(mut commands: Commands) {
         GlobalZIndex(2)
         DespawnOnExit::<Menu>(Menu::Main)
         Children [
-            @UiButton { @text: "Play" } on(enter_loading_or_gameplay_screen),
-            @UiButton { @text: "Settings" } on(open_settings_menu),
-            @UiButton { @text: "Credits" } on(open_credits_menu),
+            @UiButton { @text: "Play", @font: CustomFont::Monogram } on(enter_loading_or_gameplay_screen),
+            @UiButton { @text: "Settings", @font: CustomFont::Monogram } on(open_settings_menu),
+            @UiButton { @text: "Credits", @font: CustomFont::Monogram } on(open_credits_menu),
             {exit_button()},
         ]
     });
@@ -30,7 +33,7 @@ fn spawn_main_menu(mut commands: Commands) {
 
 #[cfg(not(target_family = "wasm"))]
 fn exit_button() -> impl SceneList {
-    bsn_list![@UiButton { @text: "Exit" } on(exit_app)]
+    bsn_list![@UiButton { @text: "Exit", @font: CustomFont::Monogram } on(exit_app)]
 }
 
 #[cfg(target_family = "wasm")]
